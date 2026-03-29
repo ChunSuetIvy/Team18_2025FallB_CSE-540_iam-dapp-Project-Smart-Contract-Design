@@ -1,57 +1,92 @@
-# Sample Hardhat 3 Beta Project (`mocha` and `ethers`)
+## IAM dApp Smart Contract Design (Team 18, ASU CSE 540)
 
-This project showcases a Hardhat 3 Beta project using `mocha` for tests and the `ethers` library for Ethereum interactions.
+This is a team project for CSE 540 and is currently under development. The code and tests are intended as a working proof of concept for DID + credential-based access control.
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+### What you’ll find in this repo
 
-## Project Overview
+- `contracts/`: smart contracts in Solidity
+	- `DIDRegistry.sol` (DID lifecycle)
+	- `CredentialIssuer.sol` (trusted issuer credential system)
+	- `AccessControl.sol` (resource-backed role management)
+- `test/`:
+	- `IAM.test.js` (node-based tests for full workflow and edge cases)
+- setup files: `hardhat.config.ts`, `package.json`, `tsconfig.json`
 
-This example project includes:
+### What we want to solve
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using `mocha` and ethers.js
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+- let people create and manage DIDs that can be deactivated safely
+- let an admin and trusted issuers issue/ revoke credentials
+- let resource owners grant/revoke roles based on credential requirements
 
-## Usage
+## Local setup
 
-### Running Tests
+1. Clone repository
+	- `git clone https://github.com/ChunSuetIvy/Team18_2025FallB_CSE-540_iam-dapp-Project-Smart-Contract-Design.git`
+	 - `cd Team18_2025FallB_CSE-540_iam-dapp-Project-Smart-Contract-Design`
+2. Install dependencies
+	 - `npm install`
+3. Compile contracts
+	 - `npx hardhat compile`
 
-To run all the tests in the project, execute the following command:
+## Contracts quick reference
 
-```shell
+### `DIDRegistry`
+
+- `registerDID(string didURI)`
+- `updateDID(string didURI)`
+- `revokeDID()`
+- `getDID(address)`
+- `isActiveDID(address)`
+
+### `CredentialIssuer`
+
+- `addTrustedIssuer(address)` / `removeTrustedIssuer(address)`
+- `issueCredential(address subject, string credentialType, string metadataURI, uint256 expiresAt)`
+- `revokeCredential(uint256 credentialId)`
+- `verifyCredential(uint256 credentialId)`
+- `getCredentialsBySubject(address subject)`
+
+### `IAMAccessControl` (using `DIDRegistry` + `CredentialIssuer`)
+
+- `registerResource(string name, string requiredCredentialType)`
+- `grantRole(uint256 resourceId, address account, string role, uint256 credentialId)`
+- `revokeRole(uint256 resourceId, address account, string role)`
+- `hasRole(uint256 resourceId, address account, string role)`
+- `checkAndLogAccess(uint256 resourceId, string role)`
+- `deactivateResource(uint256 resourceId)`
+
+## Test instructions
+
+Run:
+
+```bash
 npx hardhat test
 ```
 
-You can also selectively run the Solidity or `mocha` tests:
+The suite checks:
+- DID lifecycle states and access in `DIDRegistry`
+- trusted issuer flow, issuance, revocation and verification in `CredentialIssuer`
+- role grant/revoke and access checks in `IAMAccessControl`
 
-```shell
-npx hardhat test solidity
-npx hardhat test mocha
-```
+## Usage flow explained
 
-### Make a deployment to Sepolia
+1. user registers DID in `DIDRegistry`
+2. admin adds trusted issuer and issuer issues credential in `CredentialIssuer`
+3. resource owner registers resource, sets required credential type, grants roles in `IAMAccessControl`
+4. holder uses `checkAndLogAccess` to verify if they can use the resource
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
+## Notes
 
-To run the deployment to a local chain:
+- default execution is on Hardhat local network.
+- for testnets/mainnet, set your key and RPC in `hardhat.config.ts` safely.
 
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
-```
+## Project style
 
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
+Project content was written directly by Team 18.
 
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
+## Team members
 
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
-
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-```
-
-After setting the variable, you can run the deployment with the Sepolia network:
-
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
-```
+- Karim Mahmoud
+- Vijay Nambi
+- Ivy Ngai
+- Reshmi Sinhahajari
