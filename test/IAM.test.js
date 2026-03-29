@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // IAM.test.js
-// Team 18 — CSE 540, Arizona State University (2025SpringB)
+// Team 18 — CSE 540, Arizona State University (2026SpringB)
 // Hardhat v3 test suite for DIDRegistry, CredentialIssuer, and IAMAccessControl
 //
 // Run with:  npx hardhat test
