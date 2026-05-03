@@ -1,60 +1,73 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// scripts/deploy.js
-// Team 18 — CSE 540, Arizona State University (2026SpringB)
-// Deployment script for DIDRegistry, CredentialIssuer, and IAMAccessControl
-//
-// Usage:
-//   Local Hardhat network:   npx hardhat run scripts/deploy.js
-// ─────────────────────────────────────────────────────────────────────────────
+import { readFileSync, existsSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { ethers } from 'ethers';
+import { config } from 'dotenv';
+config();
 
-import { network } from "hardhat";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const ARTIFACTS_DIR = join(__dirname, '..', 'artifacts', 'contracts');
 
-const { ethers } = await network.connect();
-const [deployer] = await ethers.getSigners();
-const balance = await ethers.provider.getBalance(deployer.address);
+function loadArtifact(sourceFile, contractName) {
+  const artifactPath = join(ARTIFACTS_DIR, `${sourceFile}.sol`, `${contractName}.json`);
+  if (!existsSync(artifactPath)) {
+    throw new Error(`Artifact not found: ${artifactPath}. Run \`npm run compile\` first.`);
+  }
+  return JSON.parse(readFileSync(artifactPath, 'utf-8'));
+}
 
-console.log("─────────────────────────────────────────────");
-console.log("  Team 18 — Decentralized IAM dApp Deployer  ");
-console.log("─────────────────────────────────────────────");
-console.log(`Deployer:  ${deployer.address}`);
-console.log(`Balance:   ${ethers.formatEther(balance)} ETH`);
-console.log("─────────────────────────────────────────────\n");
+const rpcUrl = process.env.HARDHAT_RPC_URL || 'http://127.0.0.1:8545';
+const provider = new ethers.JsonRpcProvider(rpcUrl);
+const privateKey = process.env.HARDHAT_PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+const signer = new ethers.Wallet(privateKey, provider);
 
-// ── Step 1: Deploy DIDRegistry ──────────────────────────────────────────────
-console.log("1/3  Deploying DIDRegistry...");
-const DIDRegistry = await ethers.getContractFactory("DIDRegistry");
-const didRegistry = await DIDRegistry.deploy();
-await didRegistry.waitForDeployment();
-const didRegistryAddress = await didRegistry.getAddress();
-console.log(`     ✓ DIDRegistry deployed at: ${didRegistryAddress}\n`);
+async function main() {
+  const deployer = await signer.getAddress();
+  console.log('Deployer address:', deployer);
+  console.log('Using RPC URL:', rpcUrl);
 
-// ── Step 2: Deploy CredentialIssuer ─────────────────────────────────────────
-console.log("2/3  Deploying CredentialIssuer...");
-const CredentialIssuer = await ethers.getContractFactory("CredentialIssuer");
-const credentialIssuer = await CredentialIssuer.deploy(didRegistryAddress);
-await credentialIssuer.waitForDeployment();
-const credentialIssuerAddress = await credentialIssuer.getAddress();
-console.log(`     ✓ CredentialIssuer deployed at: ${credentialIssuerAddress}\n`);
+  const didRegistryArtifact = loadArtifact('DIDRegistry', 'DIDRegistry');
+  const credentialIssuerArtifact = loadArtifact('CredentialIssuer', 'CredentialIssuer');
+  const iamAccessControlArtifact = loadArtifact('AccessControl', 'IAMAccessControl');
 
-// ── Step 3: Deploy IAMAccessControl ─────────────────────────────────────────
-console.log("3/3  Deploying IAMAccessControl...");
-const IAMAccessControl = await ethers.getContractFactory("IAMAccessControl");
-const accessControl = await IAMAccessControl.deploy(
-  didRegistryAddress,
-  credentialIssuerAddress
-);
-await accessControl.waitForDeployment();
-const accessControlAddress = await accessControl.getAddress();
-console.log(`     ✓ IAMAccessControl deployed at: ${accessControlAddress}\n`);
+  let nextNonce = await provider.getTransactionCount(deployer, 'latest');
 
-// ── Summary ──────────────────────────────────────────────────────────────────
-console.log("─────────────────────────────────────────────");
-console.log("  Deployment Complete!                        ");
-console.log("─────────────────────────────────────────────");
-console.log(`DIDRegistry:       ${didRegistryAddress}`);
-console.log(`CredentialIssuer:  ${credentialIssuerAddress}`);
-console.log(`IAMAccessControl:  ${accessControlAddress}`);
-console.log("─────────────────────────────────────────────");
-console.log("\nUpdate these addresses in:");
-console.log("  → frontend/index.html  (ADDRESSES constant)");
-console.log("  → README.md            (Deployed Contracts section)");
+  const DIDRegistry = new ethers.ContractFactory(
+    didRegistryArtifact.abi,
+    didRegistryArtifact.bytecode,
+    signer
+  );
+  const didRegistry = await DIDRegistry.deploy({ nonce: nextNonce });
+  await didRegistry.waitForDeployment();
+  console.log('DIDRegistry deployed at:', didRegistry.target);
+  nextNonce += 1;
+
+  const CredentialIssuer = new ethers.ContractFactory(
+    credentialIssuerArtifact.abi,
+    credentialIssuerArtifact.bytecode,
+    signer
+  );
+  const credentialIssuer = await CredentialIssuer.deploy(didRegistry.target, { nonce: nextNonce });
+  await credentialIssuer.waitForDeployment();
+  console.log('CredentialIssuer deployed at:', credentialIssuer.target);
+  nextNonce += 1;
+
+  const IAMAccessControl = new ethers.ContractFactory(
+    iamAccessControlArtifact.abi,
+    iamAccessControlArtifact.bytecode,
+    signer
+  );
+  const accessControl = await IAMAccessControl.deploy(
+    didRegistry.target,
+    credentialIssuer.target,
+    { nonce: nextNonce }
+  );
+  await accessControl.waitForDeployment();
+  console.log('IAMAccessControl deployed at:', accessControl.target);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
