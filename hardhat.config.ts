@@ -20,19 +20,19 @@ export default defineConfig({
     },
   },
   networks: {
+    // ── Local Hardhat network (default) ──────────────────────────────────────
     hardhatMainnet: {
       type: "edr-simulated",
       chainType: "l1",
     },
-    hardhatOp: {
-      type: "edr-simulated",
-      chainType: "op",
-    },
-    sepolia: {
+    // ── Polygon Amoy Testnet ──────────────────────────────────────────────────
+    // Usage: npx hardhat run scripts/deploy.js --network amoy
+    // Set AMOY_RPC_URL and AMOY_PRIVATE_KEY in a .env file
+    amoy: {
       type: "http",
       chainType: "l1",
-      url: configVariable("SEPOLIA_RPC_URL"),
-      accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+      url: "https://rpc-amoy.polygon.technology",
+      accounts: [configVariable("AMOY_PRIVATE_KEY")],
     },
   },
 });
