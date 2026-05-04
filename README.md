@@ -1,92 +1,182 @@
-## IAM dApp Smart Contract Design (Team 18, ASU CSE 540)
+# IAM dApp — Decentralized Identity and Access Management
+## Team 18 | CSE 540: Engineering Blockchain Applications | Arizona State University
 
-This is a team project for CSE 540 and is currently under development. The code and tests are intended as a working proof of concept for DID + credential-based access control.
+A blockchain-based university credential system implementing Self-Sovereign Identity (SSI). 
+Students own Decentralized Identifiers (DIDs), universities issue verifiable credentials, 
+and employers verify them on-chain without a central authority.
 
-### What you’ll find in this repo
+---
 
-- `contracts/`: smart contracts in Solidity
-	- `DIDRegistry.sol` (DID lifecycle)
-	- `CredentialIssuer.sol` (trusted issuer credential system)
-	- `AccessControl.sol` (resource-backed role management)
-- `test/`:
-	- `IAM.test.js` (node-based tests for full workflow and edge cases)
-- setup files: `hardhat.config.ts`, `package.json`, `tsconfig.json`
+## What We Built
 
-### What we want to solve
+A fully functional dApp with three smart contracts and a React frontend demonstrating 
+the complete credential lifecycle across four stakeholder roles.
 
-- let people create and manage DIDs that can be deactivated safely
-- let an admin and trusted issuers issue/ revoke credentials
-- let resource owners grant/revoke roles based on credential requirements
+### Smart Contracts (`contracts/`)
+- `DIDRegistry.sol` — DID registration, update, and revocation lifecycle
+- `CredentialIssuer.sol` — trusted issuer management and verifiable credential issuance
+- `AccessControl.sol` — resource-backed role management using credential verification
 
-## Local setup
+### Frontend (`frontend/`)
+Four role-based tabs demonstrating end-to-end stakeholder interactions:
+- **Student / Holder** — register, update, lookup, and revoke DIDs
+- **University / Issuer** — manage trusted issuers and issue credentials
+- **Employer / Verifier** — verify credentials by ID and lookup student credentials
+- **Resource Owner** — register resources, grant/revoke roles, check access
 
-1. Clone repository
-	- `git clone https://github.com/ChunSuetIvy/Team18_2025FallB_CSE-540_iam-dapp-Project-Smart-Contract-Design.git`
-	 - `cd Team18_2025FallB_CSE-540_iam-dapp-Project-Smart-Contract-Design`
-2. Install dependencies
-	 - `npm install`
-3. Compile contracts
-	 - `npx hardhat compile`
+### Tests (`test/`)
+- `IAM.test.js` — 41 passing tests covering full workflow and edge cases
 
-## Contracts quick reference
+---
+
+## What We Solve
+
+- Let people create and manage DIDs that can be deactivated safely
+- Let an admin and trusted issuers issue and revoke verifiable credentials
+- Let resource owners grant and revoke roles based on credential requirements
+- Enable trustless verification — no central authority or issuer contact required
+
+---
+
+## Local Setup
+
+### Prerequisites
+- Node.js v18+
+- npm
+- MetaMask browser extension
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/ChunSuetIvy/Team18_2025FallB_CSE-540_iam-dapp-Project-Smart-Contract-Design.git
+cd Team18_2025FallB_CSE-540_iam-dapp-Project-Smart-Contract-Design
+```
+
+### 2. Install dependencies
+```bash
+npm install
+cd frontend && npm install && cd ..
+```
+
+### 3. Compile contracts
+```bash
+npx hardhat compile
+```
+
+### 4. Start local Hardhat network (Terminal 1)
+```bash
+npx hardhat node
+```
+
+### 5. Deploy contracts (Terminal 2)
+```bash
+node scripts/deploy.js
+```
+
+### 6. Start frontend (Terminal 3)
+```bash
+cd frontend
+npm run dev
+```
+
+Open http://localhost:5173 in your browser.
+
+### 7. Configure MetaMask
+- Network: Localhost 8545 (Chain ID: 31337)
+- Import Account #0 private key:
+  `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`
+
+---
+
+## Testnet Deployment (Polygon Amoy)
+
+The project is configured for Polygon Amoy testnet deployment.
+DIDRegistry was successfully deployed to Amoy at:
+- Address: `0x0d6D3fAc86396CC6E0eB3E88a471858E18D9d311`
+- Block: 37,703,324
+
+To deploy to Amoy, create a `.env` file in the project root:
+HARDHAT_RPC_URL=https://rpc-amoy.polygon.technology
+HARDHAT_PRIVATE_KEY=<your_private_key>
+AMOY_PRIVATE_KEY=<your_private_key>
+
+Then run:
+```bash
+node scripts/deploy.js
+```
+
+---
+
+## Contracts Quick Reference
 
 ### `DIDRegistry`
-
-- `registerDID(string didURI)`
-- `updateDID(string didURI)`
-- `revokeDID()`
-- `getDID(address)`
-- `isActiveDID(address)`
+- `registerDID(string didURI)` — register a new DID
+- `updateDID(string didURI)` — update DID URI
+- `revokeDID()` — deactivate DID
+- `getDID(address)` — lookup DID by address
+- `isActiveDID(address)` — check if DID is active
 
 ### `CredentialIssuer`
+- `addTrustedIssuer(address)` / `removeTrustedIssuer(address)` — manage trusted issuers
+- `issueCredential(address subject, string credentialType, string metadataURI, uint256 expiresAt)` — issue credential
+- `revokeCredential(uint256 credentialId)` — revoke credential
+- `verifyCredential(uint256 credentialId)` — verify credential validity
+- `getCredentialsBySubject(address subject)` — get all credentials for a subject
 
-- `addTrustedIssuer(address)` / `removeTrustedIssuer(address)`
-- `issueCredential(address subject, string credentialType, string metadataURI, uint256 expiresAt)`
-- `revokeCredential(uint256 credentialId)`
-- `verifyCredential(uint256 credentialId)`
-- `getCredentialsBySubject(address subject)`
+### `IAMAccessControl`
+- `registerResource(string name, string requiredCredentialType)` — register a resource
+- `grantRole(uint256 resourceId, address account, string role, uint256 credentialId)` — grant role
+- `revokeRole(uint256 resourceId, address account, string role)` — revoke role
+- `hasRole(uint256 resourceId, address account, string role)` — check role
+- `checkAndLogAccess(uint256 resourceId, string role)` — verify and log access on-chain
+- `deactivateResource(uint256 resourceId)` — deactivate resource
 
-### `IAMAccessControl` (using `DIDRegistry` + `CredentialIssuer`)
+---
 
-- `registerResource(string name, string requiredCredentialType)`
-- `grantRole(uint256 resourceId, address account, string role, uint256 credentialId)`
-- `revokeRole(uint256 resourceId, address account, string role)`
-- `hasRole(uint256 resourceId, address account, string role)`
-- `checkAndLogAccess(uint256 resourceId, string role)`
-- `deactivateResource(uint256 resourceId)`
-
-## Test instructions
-
-Run:
+## Running Tests
 
 ```bash
 npx hardhat test
 ```
 
 The suite checks:
-- DID lifecycle states and access in `DIDRegistry`
-- trusted issuer flow, issuance, revocation and verification in `CredentialIssuer`
-- role grant/revoke and access checks in `IAMAccessControl`
+- DID lifecycle states and access control in `DIDRegistry`
+- Trusted issuer flow, issuance, revocation and verification in `CredentialIssuer`
+- Role grant/revoke and access checks in `IAMAccessControl`
+- All 41 tests pass 
 
-## Usage flow explained
+---
 
-1. user registers DID in `DIDRegistry`
-2. admin adds trusted issuer and issuer issues credential in `CredentialIssuer`
-3. resource owner registers resource, sets required credential type, grants roles in `IAMAccessControl`
-4. holder uses `checkAndLogAccess` to verify if they can use the resource
+## Demo Flow
+
+1. Student registers DID in `DIDRegistry`
+2. Admin adds trusted issuer; issuer issues credential in `CredentialIssuer`
+3. Resource owner registers resource and grants role in `IAMAccessControl`
+4. Employer verifies credential trustlessly from the blockchain
+5. Student uses `checkAndLogAccess` to verify resource access
+6. Student revokes DID to complete the full lifecycle
+
+---
 
 ## Notes
 
-- default execution is on Hardhat local network.
-- for testnets/mainnet, set your key and RPC in `hardhat.config.ts` safely.
+- Default execution is on Hardhat local network
+- For testnet deployment, configure `.env` as described above
+- Never commit your `.env` file — it is included in `.gitignore`
+- Projected gas costs on Polygon Amoy: ~71.5k for DID registration, ~87.2k for 
+  credential issuance, ~28.4k for revocation
 
-## Project style
+---
 
-Project content was written directly by Team 18.
-
-## Team members
+## Team Members
 
 - Karim Mahmoud
 - Vijay Nambi
 - Ivy Ngai
 - Reshmi Sinhahajari
+
+---
+
+## Project Context
+
+This project was developed for CSE 540: Engineering Blockchain Applications at 
+Arizona State University (Spring 2026). All code was written directly by Team 18.
